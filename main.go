@@ -1,51 +1,83 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
+	"os"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/vk"
 )
 
-func routes() http.Handler {
-	request := http.NewServeMux()
-	request.Handle("/auth", http.HandlerFunc(auth))
-	return request
+var (
+	conf *oauth2.Config
+)
+
+func root(c *gin.Context) {
+	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	c.HTML(
+		http.StatusOK,
+		"index.html",
+		gin.H{
+			"authUrl": url,
+		},
+	)
 }
 
-func auth(writer http.ResponseWriter, _ *http.Request) {
-
-	resp, err := http.Get("https://oauth.vk.com/authorize?client_id=7897817&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=groups&response_type=token&v=5.52")
+func auth(c *gin.Context) {
+	ctx := context.Background()
+	// получаем код от API VK из квери стринга
+	authCode := c.Request.URL.Query()["code"]
+	// меняем код на access токен
+	tok, err := conf.Exchange(ctx, authCode[0])
 	if err != nil {
-		return
+		log.Fatal().Msgf("Fatal error: %v", err)
+	}
+
+	apiUrl := fmt.Sprintf("https://api.vk.com/method/users.getSubscriptions?extended=1&count=200&v=5.131&access_token=%s", tok.AccessToken)
+
+	log.Debug().Msgf("get subs from url: %s", apiUrl)
+
+	resp, err := http.Get(apiUrl)
+	if err != nil {
+		log.Fatal().Msgf("Fatal error: %v", err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("Got response: %v", resp)
-
 	// headers
+
 	for name, values := range resp.Header {
-		writer.Header()[name] = values
+		c.Writer.Header()[name] = values
 	}
 
 	// status (must come after setting headers and before copying body)
-	writer.WriteHeader(resp.StatusCode)
 
-	// body
-	io.Copy(writer, resp.Body)
+	c.Writer.WriteHeader(resp.StatusCode)
+
+	io.Copy(c.Writer, resp.Body)
 }
 
 func main() {
-	handlers := http.NewServeMux()
-	handlers.Handle("/", routes())
-	srv := &http.Server{
-		Addr:         ":8080",
-		Handler:      handlers,
-		ReadTimeout:  20 * time.Second,
-		WriteTimeout: 20 * time.Second,
-	}
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
-	if err := srv.ListenAndServe(); err != nil {
-		fmt.Printf("ListenAndServe failed: %v", err)
+	conf = &oauth2.Config{
+		ClientID:     os.Getenv("CLIENT_ID"),
+		ClientSecret: os.Getenv("CLIENT_SECRET"),
+		RedirectURL:  os.Getenv("REDIRECT_URL"),
+		Scopes:       []string{"groups"},
+		Endpoint:     vk.Endpoint,
 	}
+	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	fmt.Printf("Visit the URL for the auth dialog: %v\n", url)
+
+	r := gin.New()
+	r.LoadHTMLGlob("templates/*")
+	r.GET("/", root)
+	r.GET("/auth", auth)
+	r.Run(":8080")
 }
