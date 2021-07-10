@@ -32,7 +32,7 @@ func (r router) Root(c *gin.Context) {
 		http.StatusOK,
 		"/templates/index.html",
 		gin.H{
-			"authUrl": url,
+			"groupsUrl": url,
 		},
 	)
 }
