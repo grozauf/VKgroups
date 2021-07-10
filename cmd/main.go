@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"html/template"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	vkApi "github.com/go-vk-api/vk"
+	"github.com/grozauf/VKgroups/internal/assets"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
@@ -21,7 +25,7 @@ func root(c *gin.Context) {
 	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
 	c.HTML(
 		http.StatusOK,
-		"index.html",
+		"/templates/index.html",
 		gin.H{
 			"authUrl": url,
 		},
@@ -87,9 +91,33 @@ func main() {
 		Endpoint:     vk.Endpoint,
 	}
 
-	r := gin.New()
-	r.LoadHTMLGlob("templates/*")
+	r := gin.Default()
+
+	t, err := loadTemplate()
+	if err != nil {
+		panic(err)
+	}
+
+	r.SetHTMLTemplate(t)
 	r.GET("/", root)
 	r.GET("/groups", groups)
 	r.Run(":8080")
+}
+
+func loadTemplate() (*template.Template, error) {
+	t := template.New("")
+	for name, file := range assets.Assets.Files {
+		if file.IsDir() || !strings.HasSuffix(name, ".html") {
+			continue
+		}
+		h, err := ioutil.ReadAll(file)
+		if err != nil {
+			return nil, err
+		}
+		t, err = t.New(name).Parse(string(h))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return t, nil
 }
