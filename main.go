@@ -2,12 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
+	vkApi "github.com/go-vk-api/vk"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
@@ -29,37 +28,52 @@ func root(c *gin.Context) {
 	)
 }
 
-func auth(c *gin.Context) {
+func groups(c *gin.Context) {
 	ctx := context.Background()
 	// получаем код от API VK из квери стринга
 	authCode := c.Request.URL.Query()["code"]
+
 	// меняем код на access токен
 	tok, err := conf.Exchange(ctx, authCode[0])
 	if err != nil {
 		log.Fatal().Msgf("Fatal error: %v", err)
 	}
-
-	apiUrl := fmt.Sprintf("https://api.vk.com/method/users.getSubscriptions?extended=1&count=200&v=5.131&access_token=%s", tok.AccessToken)
-
-	log.Debug().Msgf("get subs from url: %s", apiUrl)
-
-	resp, err := http.Get(apiUrl)
+	client, err := vkApi.NewClientWithOptions(
+		vkApi.WithToken(tok.AccessToken),
+	)
 	if err != nil {
 		log.Fatal().Msgf("Fatal error: %v", err)
 	}
-	defer resp.Body.Close()
-
-	// headers
-
-	for name, values := range resp.Header {
-		c.Writer.Header()[name] = values
+	var response struct {
+		Count  int64 `json:"count"`
+		Groups []struct {
+			Id           int64  `json:"id"`
+			Name         string `json:"name"`
+			ScreenName   string `json:"screen_name"`
+			IsClosed     int64  `json:"is_closed"`
+			Deactivated  string `json:"deactivated"`
+			IsAdmin      int64  `json:"is_admin"`
+			AdminLevel   int64  `json:"admin_level"`
+			IsMember     int64  `json:"is_member"`
+			IsAdvertiser int64  `json:"is_advertiser"`
+			InvitedBy    int64  `json:"invited_by"`
+			Type         string `json:"type"`
+			Photo50      string `json:"photo_50"`
+			Photo100     string `json:"photo_100"`
+			Photo200     string `json:"photo_200"`
+		} `json:"items"`
 	}
 
-	// status (must come after setting headers and before copying body)
+	err = client.CallMethod(
+		"users.getSubscriptions",
+		vkApi.RequestParams{"extended": "1", "count": "200", "v": "5.131"},
+		&response,
+	)
+	if err != nil {
+		log.Fatal().Msgf("Fatal error: %v", err)
+	}
 
-	c.Writer.WriteHeader(resp.StatusCode)
-
-	io.Copy(c.Writer, resp.Body)
+	c.JSON(http.StatusOK, &response)
 }
 
 func main() {
@@ -72,12 +86,10 @@ func main() {
 		Scopes:       []string{"groups"},
 		Endpoint:     vk.Endpoint,
 	}
-	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
-	fmt.Printf("Visit the URL for the auth dialog: %v\n", url)
 
 	r := gin.New()
 	r.LoadHTMLGlob("templates/*")
 	r.GET("/", root)
-	r.GET("/auth", auth)
+	r.GET("/groups", groups)
 	r.Run(":8080")
 }
