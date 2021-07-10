@@ -64,5 +64,12 @@ func (r router) Groups(c *gin.Context) {
 		log.Fatal().Msgf("Fatal error: %v", err)
 	}
 
-	c.JSON(http.StatusOK, &response)
+	//c.JSON(http.StatusOK, &response)
+	c.HTML(
+		http.StatusOK,
+		"/templates/groups.html",
+		gin.H{
+			"list": response,
+		},
+	)
 }

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+{{template "header" .}}
+<body>
+	{{.list.Count}}
+	{{ range .list.Groups }}
+		<p>
+			<img src={{.Photo200}}><br>
+			<input type="checkbox" name="groups" value={{.Id}}/>
+			<span style="padding: 0px 20px;">&nbsp;</span>
+			<a href="https://vk.com/club{{.Id}}">{{.Name}}</a>
+		</p>
+	{{end}}
+</body>
+</html>
