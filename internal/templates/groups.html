@@ -8,7 +8,7 @@
 		{{ range .list.Groups }}
 			<p>
 				<img src={{.Photo200}}><br>
-				<input type="checkbox" name="groups[]" value="{{.Id}}" id="{{.Id}}"/>
+				<input type="checkbox" name="groups[]" value="{{.Id}}" id="{{.Id}}" checked/>
 				<span style="padding: 0px 20px;">&nbsp;</span>
 				<a href="https://vk.com/club{{.Id}}">{{.Name}}</a>
 			</p>

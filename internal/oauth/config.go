@@ -16,6 +16,8 @@ var VKEndpoint = Endpoint{
 
 type Config interface {
 	AuthURL(state string) string
+	SetToken(token string)
+	Token() string
 }
 
 func NewConfig(clientId string, clientSecret string, redirectUrl string, scopes []string, ep Endpoint) Config {
@@ -47,6 +49,9 @@ type config struct {
 
 	// Scope specifies optional requested permissions.
 	Scopes []string
+
+	//
+	token string
 }
 
 func (c config) AuthURL(state string) string {
@@ -64,4 +69,12 @@ func (c config) AuthURL(state string) string {
 	)
 	log.Info().Msgf("Auth url: %s", url)
 	return url
+}
+
+func (c *config) SetToken(token string) {
+	c.token = token
+}
+
+func (c config) Token() string {
+	return c.token
 }

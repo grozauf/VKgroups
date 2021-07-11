@@ -1,7 +1,12 @@
 .PHONY: build
 build: .generate .build
 .build:
-		go build -o ./bin/server ./cmd/main.go
+		go build -o ./bin/server ./cmd/server/main.go
+
+.PHONY: surf
+surf: .surf
+.surf:
+		go build -o ./bin/surf ./cmd/surf/main.go
 
 .PHONY: generate
 generate: .generate

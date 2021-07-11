@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/grozauf/VKgroups/internal/groups"
@@ -28,12 +29,11 @@ type router struct {
 }
 
 func (r router) Root(c *gin.Context) {
-	url := r.conf.AuthURL("state")
 	c.HTML(
 		http.StatusOK,
 		"/templates/index.html",
 		gin.H{
-			"groupsUrl": url,
+			"groupsUrl": "/groups?access_token=" + r.conf.Token(),
 		},
 	)
 }
@@ -99,7 +99,8 @@ func (r router) Delete(c *gin.Context) {
 
 	var form groupsForm
 	c.ShouldBind(&form)
-	for groupId := range form.Groups {
+	for _, groupId := range form.Groups {
+		log.Info().Msgf("Leave group with id: %s", groupId)
 		err = client.CallMethod(
 			"groups.leave",
 			vkApi.RequestParams{"group_id": groupId, "v": "5.131", "state": "state"},
@@ -110,6 +111,7 @@ func (r router) Delete(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, err)
 			return
 		}
-
+		log.Info().Msg("sleep 4 seconds...")
+		time.Sleep(time.Second * 4)
 	}
 }
