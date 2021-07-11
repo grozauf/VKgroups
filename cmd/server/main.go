@@ -56,15 +56,18 @@ func main() {
 	fmt.Println("Url: ", bow.Url())
 	fmt.Println("Body: ", bow.Body())
 
-	captcha_key, _ := inputbox.InputBox("CAPTCHA", "Type a key", "")
-
+	// if we got form, so vk wants captcha key
 	fm, _ = bow.Form("form")
-	fm.Input("captcha_key", captcha_key)
-	if fm.Submit() != nil {
-		panic(err)
+	if fm != nil {
+		captcha_key, _ := inputbox.InputBox("CAPTCHA", "Type a key", "")
+
+		fm.Input("captcha_key", captcha_key)
+		if fm.Submit() != nil {
+			panic(err)
+		}
+		fmt.Println("Url: ", bow.Url())
+		fmt.Println("Body: ", bow.Body())
 	}
-	fmt.Println("Url: ", bow.Url())
-	fmt.Println("Body: ", bow.Body())
 
 	authUrlQuery := bow.Url().Query()["authorize_url"]
 	authUrl, _ := url.QueryUnescape(authUrlQuery[0])
@@ -72,10 +75,12 @@ func main() {
 	authUrl = strings.Replace(authUrl, "#", "?", 1)
 	u, _ := url.Parse(authUrl)
 	token := u.Query()["access_token"][0]
+	userId := u.Query()["user_id"][0]
 
-	fmt.Println("Got token: ", token)
+	fmt.Println("Got token: ", token, " user_id: ", userId)
 
 	conf.SetToken(token)
+	conf.SetUser(userId)
 
 	leaveUrl := "https://api.vk.com/method/groups.leave?group_id=141391486&v=5.131&access_token=" + token
 	err = bow.Open(leaveUrl)

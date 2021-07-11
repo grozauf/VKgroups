@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -29,11 +30,12 @@ type router struct {
 }
 
 func (r router) Root(c *gin.Context) {
+
 	c.HTML(
 		http.StatusOK,
 		"/templates/index.html",
 		gin.H{
-			"groupsUrl": "/groups?access_token=" + r.conf.Token(),
+			"groupsUrl": fmt.Sprintf("/groups?access_token=%s&user_id=%s", r.conf.Token(), r.conf.User()),
 		},
 	)
 }
@@ -47,10 +49,11 @@ func (r router) Fragment(c *gin.Context) {
 }
 
 func (r router) Groups(c *gin.Context) {
-	authToken := c.Request.URL.Query()["access_token"]
+	authToken := c.Request.URL.Query()["access_token"][0]
+	userId := c.Request.URL.Query()["user_id"][0]
 
 	client, err := vkApi.NewClientWithOptions(
-		vkApi.WithToken(authToken[0]),
+		vkApi.WithToken(authToken),
 	)
 	if err != nil {
 		log.Error().Msgf("Error: %v", err)
@@ -60,8 +63,8 @@ func (r router) Groups(c *gin.Context) {
 	var response groups.GroupList
 
 	err = client.CallMethod(
-		"users.getSubscriptions",
-		vkApi.RequestParams{"extended": "1", "count": "200", "v": "5.131"},
+		"groups.get",
+		vkApi.RequestParams{"user_id": userId, "extended": "1", "count": "200", "v": "5.131"},
 		&response,
 	)
 	if err != nil {
@@ -76,7 +79,7 @@ func (r router) Groups(c *gin.Context) {
 		"/templates/groups.html",
 		gin.H{
 			"list":  response,
-			"token": authToken[0],
+			"token": authToken,
 		},
 	)
 }

@@ -18,6 +18,8 @@ type Config interface {
 	AuthURL(state string) string
 	SetToken(token string)
 	Token() string
+	SetUser(userId string)
+	User() string
 }
 
 func NewConfig(clientId string, clientSecret string, redirectUrl string, scopes []string, ep Endpoint) Config {
@@ -52,6 +54,9 @@ type config struct {
 
 	//
 	token string
+
+	//
+	userId string
 }
 
 func (c config) AuthURL(state string) string {
@@ -77,4 +82,12 @@ func (c *config) SetToken(token string) {
 
 func (c config) Token() string {
 	return c.token
+}
+
+func (c *config) SetUser(userId string) {
+	c.userId = userId
+}
+
+func (c config) User() string {
+	return c.userId
 }
