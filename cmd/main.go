@@ -5,22 +5,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/grozauf/VKgroups/internal/assets"
+	"github.com/grozauf/VKgroups/internal/oauth"
 	"github.com/grozauf/VKgroups/internal/router"
 	"github.com/rs/zerolog"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/vk"
 )
 
 func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
-	conf := &oauth2.Config{
-		ClientID:     os.Getenv("CLIENT_ID"),
-		ClientSecret: os.Getenv("CLIENT_SECRET"),
-		RedirectURL:  os.Getenv("REDIRECT_URL"),
-		Scopes:       []string{"groups"},
-		Endpoint:     vk.Endpoint,
-	}
+	conf := oauth.NewConfig(
+		os.Getenv("CLIENT_ID"),
+		os.Getenv("CLIENT_SECRET"),
+		os.Getenv("REDIRECT_URL"),
+		[]string{"groups"},
+		oauth.VKEndpoint,
+	)
 
 	router := router.NewRouter(conf)
 
@@ -33,6 +32,8 @@ func main() {
 
 	srv.SetHTMLTemplate(t)
 	srv.GET("/", router.Root)
+	srv.GET("/fragment", router.Fragment)
 	srv.GET("/groups", router.Groups)
+	srv.POST("/delete", router.Delete)
 	srv.Run(":8080")
 }
